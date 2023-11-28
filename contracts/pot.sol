@@ -100,7 +100,7 @@ contract Pot is Initializable {
     // --- Administration ---
     function file(bytes32 what, uint256 data) external auth {
         require(live == 1, "Pot/not-live");
-        require(block.timestamp == rho, "Pot/rho-not-updated");
+        if (block.timestamp > rho) drip();
         if (what == "dsr") dsr = data;
         else revert("Pot/file-unrecognized-param");
     }
@@ -116,7 +116,7 @@ contract Pot is Initializable {
     }
 
     // --- Savings Rate Accumulation ---
-    function drip() external returns (uint tmp) {
+    function drip() public returns (uint tmp) {
         require(block.timestamp >= rho, "Pot/invalid-now");
         tmp = _rmul(_rpow(dsr, block.timestamp - rho, ONE), chi);
         uint chi_ = tmp - chi;
