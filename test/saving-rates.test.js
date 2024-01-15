@@ -1,18 +1,13 @@
 const { ethers, upgrades, network } = require('hardhat');
 const { expect, assert } = require("chai");
-const NetworkSnapshotter = require("./helpers/networkSnapshotter");
+const NetworkSnapshotter = require("../helpers/networkSnapshotter");
 const { ether } = require("@openzeppelin/test-helpers");
-const { advanceTime, randomBN, toRay } = require("./helpers/utils");
+const { advanceTime, randomBN, toRay } = require("../helpers/utils");
 const { parseEther } = ethers.utils;
 const toBN = ethers.BigNumber.from;
 
+const e18 = parseEther('1');
 const ray = toRay('1');
-
-/**
- * Test requires davos contracts
- * To run it, clone this file and all dsr contracts to davos-contracts project
- * and compile
- */
 describe('===DSR===', function () {
 
   this.timeout(30000);
@@ -238,6 +233,9 @@ describe('===DSR===', function () {
     //Saving rates
     pot = await upgrades.deployProxy(this.Pot, [vat.address], { initializer: "initialize" });
     await pot.deployed();
+    await pot.connect(deployer)["file(bytes32,uint256)"](ethers.utils.formatBytes32String("dsr"), "1000000000315522921573372069");
+    await pot.connect(deployer)["file(bytes32,address)"](ethers.utils.formatBytes32String("vow"), vow.address)
+
     sDusd = await upgrades.deployProxy(this.sDusd, [davosJoin.address, pot.address], { initializer: "initialize" });
     await sDusd.deployed();
     await vat.rely(pot.address);
@@ -253,7 +251,8 @@ describe('===DSR===', function () {
 
       await aMaticc.connect(signer).approve(this.address, ethers.constants.MaxUint256);
       await this.connect(signer).deposit(signer.address, aMaticc.address, amount);
-      const availableToBorrow = await this.availableToBorrow(aMaticc.address, signer.address);
+      const availableToBorrow = (await this.availableToBorrow(aMaticc.address, signer.address))
+        .mul(90n).div(100n);
       console.log(`available to borrow: ${availableToBorrow}`);
 
       const davosBalanceBefore = await davos.balanceOf(signer.address);
@@ -277,6 +276,29 @@ describe('===DSR===', function () {
     await init();
     await networkSnapshotter.firstSnapshot();
   });
+
+  describe('mint davos', async () => {
+
+    before(async function () {
+      await networkSnapshotter.revert();
+    })
+
+    it('mint davos = bridge', async () => {
+
+      console.log(`wards: ${await davos.wards(deployer.address)}`);
+
+      console.log(`signer balance before: ${await davos.balanceOf(signer1.address)}`);
+      console.log(`total supply before: ${await davos.totalSupply()}`);
+
+      await davos.mint(signer1.address, parseEther('1'));
+      console.log(`signer balance after: ${await davos.balanceOf(signer1.address)}`);
+      console.log(`total supply after: ${await davos.totalSupply()}`);
+      console.log(`vat.vice: ${await vat.vice()}`);
+
+    })
+
+  })
+
 
   describe('ERC-4626', async () => {
 
@@ -504,6 +526,59 @@ describe('===DSR===', function () {
 
   })
 
+  describe('Deposit and earn', async () => {
+
+    before(async function () {
+      await networkSnapshotter.revert();
+    })
+
+    it('Deposit and gain rewards', async function () {
+      await interaction.setCollateralDuty(collateralToken.address, "1000000000315522921573372069");
+      const signer = signer1;
+      const receiver = signer1;
+      await interaction.depositAndBorrowMax(signer, parseEther('100'));
+      const saveAmount = parseEther('10');
+
+      await davos.connect(signer).approve(sDusd.address, saveAmount);
+      await sDusd.connect(signer)['deposit(uint256,address)'](saveAmount, receiver.address);
+      const davosBalanceBefore = await davos.balanceOf(signer.address);
+      const sdusdBalanceBefore = await sDusd.balanceOf(receiver.address);
+      console.log(`davosBalanceBefore: ${davosBalanceBefore}`);
+      console.log(`sdusdBalanceBefore: ${sdusdBalanceBefore}`);
+      console.log(`vat.vice: ${await vat.vice()}`);
+
+      const chi = await pot.chi();
+      await advanceTime(365 * 86400);
+      const maxRedeem = await sDusd.maxRedeem(signer.address);
+      await sDusd.connect(signer).redeem(maxRedeem, receiver.address, signer.address);
+
+      const davosBalanceAfter = await davos.balanceOf(signer.address);
+      const sdusdBalanceAfter = await sDusd.balanceOf(receiver.address);
+      console.log(`davosBalanceAfter: ${davosBalanceAfter}`);
+      console.log(`sdusdBalanceAfter: ${sdusdBalanceAfter}`);
+      console.log(`vat.vice: ${await vat.vice()}`);
+      console.log(`Total asset: ${await sDusd.totalAssets()}`);
+
+      //Pay off
+      const debt = (await vat.vice());
+      const debtWad = debt.div(ray).add(1);
+      console.log(`debt in wad: ${debtWad}`);
+
+      await davos.mint(signer2.address, debtWad);
+      await davos.connect(signer2).approve(vow.address, debtWad);
+      await vow.connect(signer2).feed(debtWad);
+
+      await vow.connect(signer2).heal(debt);
+      console.log(`vat.vice: ${await vat.vice()}`);
+
+      // expect(sdusdBalanceAfter.sub(sdusdBalanceBefore)).to.be.eq(saveAmount);
+      // expect(davosBalanceBefore.sub(davosBalanceAfter)).to.be.closeTo(saveAmount.mul(chi).div(ray), 1);
+      // expect(await sDusd.totalAssets()).to.be.closeTo(totalShares.mul(chi).div(ray), 10);
+    })
+
+
+  })
+
   describe('Withdraw and redeem sDusd', async () => {
 
     before(async function () {
@@ -553,6 +628,7 @@ describe('===DSR===', function () {
         await advanceTime(365 * 86400);
         const sdusdBalanceBefore = await sDusd.balanceOf(signer.address);
         const davosBalanceBefore = await davos.balanceOf(receiver.address);
+        console.log(`davosBalanceBefore ${davosBalanceBefore}`);
 
         let withdrawAmount = arg.withdrawAmount;
         if (arg.withdrawPercent !== undefined) {
@@ -569,6 +645,7 @@ describe('===DSR===', function () {
         const davosBalanceAfter = await davos.balanceOf(receiver.address);
         console.log(`davosBalanceAfter ${davosBalanceAfter}`);
         console.log(`sdusdBalanceAfter ${sdusdBalanceAfter}`);
+        console.log(`earnings ${davosBalanceAfter.sub(saveAmount)}`);
         console.log(`Total assets: ${await sDusd.totalAssets()}`);
 
         expect(sdusdBalanceBefore.sub(sdusdBalanceAfter)).to.be.eq(withdrawAmount);
