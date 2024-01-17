@@ -72,7 +72,7 @@ async function main() {
 
     console.log("Transfering Ownership");
 
-    await pot.rely(multisig); console.log("Relied");
+    await (await pot.rely(multisig)).wait(); console.log("Relied");
 
     const proxyAdminAddress = parseAddress(await ethers.provider.getStorageAt(pot.address, admin_slot));
 
@@ -86,7 +86,7 @@ async function main() {
     if (owner != ethers.constants.AddressZero && owner != multisig) {
         PROXY_ADMIN_ABI = ["function transferOwnership(address newOwner) public"];
         let proxyAdmin = await ethers.getContractAt(PROXY_ADMIN_ABI, proxyAdminAddress);
-        await proxyAdmin.transferOwnership(multisig);
+        await(await proxyAdmin.transferOwnership(multisig)).wait();
         console.log("proxyAdmin transferred");
     } else {
         console.log("Already owner of proxyAdmin")
