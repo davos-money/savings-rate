@@ -64,7 +64,7 @@ module.exports = {
         },
         arbitrumTestnet: {
             url: process.env.ARBITRUMGOERLI_URL,
-            chainId: 421613,
+            chainId: 421614,
             accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
             gasPrice: parseInt(process.env.GAS_PRICE_ARB) || 'auto'
         },
