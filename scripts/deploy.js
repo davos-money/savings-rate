@@ -2,6 +2,17 @@ let hre = require("hardhat");
 let {ethers, upgrades} = require("hardhat");
 const fs = require("fs");
 
+const admin_slot = "0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103";
+
+function parseAddress(addressString){
+    const buf = Buffer.from(addressString.replace(/^0x/, ''), 'hex');
+    if (!buf.slice(0, 12).equals(Buffer.alloc(12, 0))) {
+        return undefined;
+    }
+    const address = '0x' + buf.toString('hex', 12, 32); // grab the last 20 bytes
+    return ethers.utils.getAddress(address);
+}
+
 async function main() {
 
     let multisig, dusdJoin, vat;
@@ -21,11 +32,11 @@ async function main() {
         dusdJoin = "0x92E77bA6ceCb46733aE482ba1d7E011Aa872Ad7e";
         vat = "0x2304CE6B42D505141A286B7382d4D515950b1890";
     } else if (hre.network.name == "ethereumTestnet") {
-        multisig = "0x2850C2929B33BCE33b8aa81B0A9D1d3632118896";
+        multisig = "0x9126BC45A20076Eb9f65dE83C18bd3d618759Fc4";
         dusdJoin = "0x2bd37dd458Aa7Add2fC086a0236B7ffcd8Fc2277";
         vat = "0xD3Fa07Fd66197EF36bCf882d6977D8cfcEd79a82";
     } else if (hre.network.name == "arbitrumTestnet") {
-        multisig = "0x2850C2929B33BCE33b8aa81B0A9D1d3632118896";
+        multisig = "0x9126BC45A20076Eb9f65dE83C18bd3d618759Fc4";
         dusdJoin = "0x0Bd25e4e793340134bc560Cd04D24A3937e4a419";
         vat = "0x13f906d331E78fFca64232358E3F0D15DDf33Ce9";
     } else throw "ERROR";
@@ -61,7 +72,25 @@ async function main() {
 
     console.log("Transfering Ownership");
 
-    await pot.rely(multisig);
+    await pot.rely(multisig); console.log("Relied");
+
+    const proxyAdminAddress = parseAddress(await ethers.provider.getStorageAt(pot.address, admin_slot));
+
+    let PROXY_ADMIN_ABI = ["function owner() public view returns (address)"];
+    let proxyAdmin = await ethers.getContractAt(PROXY_ADMIN_ABI, proxyAdminAddress);
+
+    let owner = await proxyAdmin.owner();
+    console.log("Owner: ", owner);
+    console.log("Multi: ", multisig);
+
+    if (owner != ethers.constants.AddressZero && owner != multisig) {
+        PROXY_ADMIN_ABI = ["function transferOwnership(address newOwner) public"];
+        let proxyAdmin = await ethers.getContractAt(PROXY_ADMIN_ABI, proxyAdminAddress);
+        await proxyAdmin.transferOwnership(multisig);
+        console.log("proxyAdmin transferred");
+    } else {
+        console.log("Already owner of proxyAdmin")
+    }
 
     console.log("FINISHED");
 }
