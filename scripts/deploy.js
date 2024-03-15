@@ -31,6 +31,14 @@ async function main() {
         multisig = "0x39355FFAfC47E54E7d7e786b1Df0fa0e222FBd06";
         dusdJoin = "0x92E77bA6ceCb46733aE482ba1d7E011Aa872Ad7e";
         vat = "0x2304CE6B42D505141A286B7382d4D515950b1890";
+    } else if (hre.network.name == "optimism") {
+        multisig = "0xd41773c62c84f828D5Db0F9B8B0274cB5aB352Bd";
+        dusdJoin = "0xe84d3029feDd3CbE3d30c5245679CBD9B30118bC";
+        vat = "0xf2393EEAdD67bf68a60f39992113775966F34E1e";
+    } else if (hre.network.name == "bsc") {
+        multisig = "0x0567E328D0E23be8B8cB8c3004bEAc39fbD11082";
+        dusdJoin = "0x92E77bA6ceCb46733aE482ba1d7E011Aa872Ad7e";
+        vat = "0x2304CE6B42D505141A286B7382d4D515950b1890";
     } else if (hre.network.name == "ethereumTestnet") {
         multisig = "0x9126BC45A20076Eb9f65dE83C18bd3d618759Fc4";
         dusdJoin = "0x2bd37dd458Aa7Add2fC086a0236B7ffcd8Fc2277";
@@ -39,6 +47,14 @@ async function main() {
         multisig = "0x9126BC45A20076Eb9f65dE83C18bd3d618759Fc4";
         dusdJoin = "0x0Bd25e4e793340134bc560Cd04D24A3937e4a419";
         vat = "0x13f906d331E78fFca64232358E3F0D15DDf33Ce9";
+    } else if (hre.network.name == "optimismTestnet") {
+        multisig = "0x9126BC45A20076Eb9f65dE83C18bd3d618759Fc4";
+        dusdJoin = "0x5C056F18Fa06bC18Fb0bfe7E4720B9F6bca20bBd";
+        vat = "0xf20104d12Ee4eaaE9e54793E615c6Cf1d413683a";
+    } else if (hre.network.name == "bscTestnet") {
+        multisig = "0x9126BC45A20076Eb9f65dE83C18bd3d618759Fc4";
+        dusdJoin = "0x18706a546E93B33b0DF6957d94fFd3a4e7dC92aA";
+        vat = "0xFBd9a7332f0F4B78a55D5f6460D75b7affe9A06c";
     } else throw "ERROR";
     
     // Fetching
