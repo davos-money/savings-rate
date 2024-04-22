@@ -48,13 +48,29 @@ async function main() {
         dusdJoin = "0x0Bd25e4e793340134bc560Cd04D24A3937e4a419";
         vat = "0x13f906d331E78fFca64232358E3F0D15DDf33Ce9";
     } else if (hre.network.name == "optimismTestnet") {
-        multisig = "0x9126BC45A20076Eb9f65dE83C18bd3d618759Fc4";
-        dusdJoin = "0x5C056F18Fa06bC18Fb0bfe7E4720B9F6bca20bBd";
-        vat = "0xf20104d12Ee4eaaE9e54793E615c6Cf1d413683a";
+        multisig = "0x2850C2929B33BCE33b8aa81B0A9D1d3632118896";
+        dusdJoin = "0x6e5F76492b663828A481201AFd43e50aB2a461F1";
+        vat = "0x6e2B5b6Df646091C69299cF93F3D1CdCB11c2Fb7";
     } else if (hre.network.name == "bscTestnet") {
         multisig = "0x9126BC45A20076Eb9f65dE83C18bd3d618759Fc4";
         dusdJoin = "0x18706a546E93B33b0DF6957d94fFd3a4e7dC92aA";
         vat = "0xFBd9a7332f0F4B78a55D5f6460D75b7affe9A06c";
+    } else if (hre.network.name == "lineaTestnet") {
+        multisig = "0x2850C2929B33BCE33b8aa81B0A9D1d3632118896";
+        dusdJoin = "0x0b512BEfF98Dd112Bc4026eD23150d9F2263741A";
+        vat = "0xd4c60fA43c95F9355316ad60Eb33D55e6c7a5aEF";
+    } else if (hre.network.name == "linea") {
+        multisig = "0x8F0E864AE6aD45d973BD5B3159D5a7079A83B774";
+        dusdJoin = "0x8ed3b45662e885aABbEBd89EBe8850aD9c3C96Aa";
+        vat = "0x9032bDa78d8fCe219fB0E95b69E54047921BB816";
+    } else if (hre.network.name == "mode") {
+        multisig = "0x772bBC002e6FF0905B9fB3B5E12Ff1d78d4aa215";
+        dusdJoin = "0x77F4C841cb87fDFa43aB909cf56f7710Af648a8e";
+        vat = "0x08ABFd7DEd42CC33900d3457118eAB7fC40b71c8";
+    } else if (hre.network.name == "modeTestnet") {
+        multisig = "0x772bBC002e6FF0905B9fB3B5E12Ff1d78d4aa215";
+        dusdJoin = "0x441B80BA4B7e3d5868d3224CE8501F7d2EAe7B31";
+        vat = "0xB87028398607A1D3C97bC3693b612Af6f9019F1B";
     } else throw "ERROR";
     
     // Fetching
@@ -64,17 +80,18 @@ async function main() {
     // Deployment
     console.log("Deploying...");
 
-    let pot = await upgrades.deployProxy(this.Pot, [vat], {initializer: "initialize", nonce: _nonce}); _nonce += 1
+    let pot = await upgrades.deployProxy(this.Pot, [vat], {initializer: "initialize"});
     await pot.deployed();
-    let potImp = await upgrades.erc1967.getImplementationAddress(pot.address);
+    // let potImp = await upgrades.erc1967.getImplementationAddress(pot.address);
     console.log("Pot              : " + pot.address);
-    console.log("Imp              : " + potImp);
+    // console.log("Imp              : " + potImp);
+    
 
-    let sdusd = await upgrades.deployProxy(this.SDusd, [dusdJoin, pot.address], {initializer: "initialize", nonce: _nonce}); _nonce += 1;
+    let sdusd = await upgrades.deployProxy(this.SDusd, [dusdJoin, pot.address], {initializer: "initialize"});
     await sdusd.deployed();
-    let sdusdImp = await upgrades.erc1967.getImplementationAddress(sdusd.address);
+    // let sdusdImp = await upgrades.erc1967.getImplementationAddress(sdusd.address);
     console.log("Sdusd            : " + sdusd.address);
-    console.log("imp              : " + sdusdImp);
+    // console.log("imp              : " + sdusdImp);
 
     // Store Deployed Contracts
     const addresses = {
@@ -88,7 +105,10 @@ async function main() {
 
     console.log("Transfering Ownership");
 
-    await (await pot.rely(multisig)).wait(); console.log("Relied");
+    initialNonce = await ethers.provider.getTransactionCount(deployer.address);
+    _nonce = initialNonce
+
+    await (await pot.rely(multisig, {nonce: _nonce})).wait(); _nonce += 1; console.log("Relied");
 
     const proxyAdminAddress = parseAddress(await ethers.provider.getStorageAt(pot.address, admin_slot));
 
@@ -102,7 +122,7 @@ async function main() {
     if (owner != ethers.constants.AddressZero && owner != multisig) {
         PROXY_ADMIN_ABI = ["function transferOwnership(address newOwner) public"];
         let proxyAdmin = await ethers.getContractAt(PROXY_ADMIN_ABI, proxyAdminAddress);
-        await(await proxyAdmin.transferOwnership(multisig)).wait();
+        await(await proxyAdmin.transferOwnership(multisig, {nonce: _nonce})).wait();
         console.log("proxyAdmin transferred");
     } else {
         console.log("Already owner of proxyAdmin")
