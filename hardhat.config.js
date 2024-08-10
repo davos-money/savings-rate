@@ -127,6 +127,18 @@ module.exports = {
             chainId: 919,
             accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
             gasPrice: parseInt(process.env.GAS_PRICE_MOD) || 'auto'
+        },
+        xLayer: {
+            url: process.env.XLAYER_URL,
+            chainId: 196,
+            accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
+            gasPrice: parseInt(process.env.GAS_PRICE_XLA) || 'auto'
+        },
+        xLayerTestnet: {
+            url: process.env.XLAYERTESTNET_URL,
+            chainId: 195,
+            accounts: [`0x${process.env.DEPLOYER_PRIVATE_KEY}`],
+            gasPrice: parseInt(process.env.GAS_PRICE_XLA) || 'auto'
         }
     },
 
@@ -134,13 +146,13 @@ module.exports = {
         apiKey: process.env.SCAN_API_KEY,
         customChains: [
             {
-                network: "optimismTestnet",
-                chainId: 11155420,
+                network: "mode",
+                chainId: 34443,
                 urls: {
-                  apiURL: "https://api-sepolia-optimism.etherscan.io/api",
-                  browserURL: "https://sepolia-optimism.etherscan.io/"
+                  apiURL: "https://explorer.mode.network/api",
+                  browserURL: "https://explorer.mode.network/"
                 }
-            }
+              }
           ]
     },
 
